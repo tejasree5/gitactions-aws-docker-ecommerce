@@ -1,0 +1,58 @@
+name: Deploy Ecommerce Fullstack App on EC2
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  deploy: 
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v3
+
+      - name: List files
+        run: ls -R
+
+      - name: Copy repo to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          source: "./*"
+          target: /home/ubuntu/ecommercefullstack
+      
+      - name: Deploy on EC2 with Docker compose
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script_stop: true
+          script: |
+            # go to project folder
+            cd ~/ecommercefullstack
+
+            # install git if missing
+            if ! command -v git &> /dev/null
+            then
+              echo "Git not found. Installing..."
+              sudo apt-get update -y
+              sudo apt-get install -y git
+            fi
+
+            # stop old containers if running
+            echo "Stopping old containers..."
+            sudo docker compose down || true
+
+            # rebuild and start new containers
+            echo "Building and starting new containers..."
+            sudo docker compose up -d --build
+
+            # show running containers
+            echo "Deployment complete. Running containers:"
+            sudo docker ps
