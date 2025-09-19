@@ -34,25 +34,34 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script_stop: true
           script: |
-            # go to project folder
-            cd ~/ecommercefullstack
+  # go to home
+  cd ~
 
-            # install git if missing
-            if ! command -v git &> /dev/null
-            then
-              echo "Git not found. Installing..."
-              sudo apt-get update -y
-              sudo apt-get install -y git
-            fi
+  # if project folder does not exist, clone it
+  if [ ! -d "ecommercefullstack" ]; then
+    echo "Project folder not found. Cloning..."
+    git clone https://github.com/<your-username>/<your-repo>.git ecommercefullstack
+  fi
 
-            # stop old containers if running
-            echo "Stopping old containers..."
-            sudo docker compose down || true
+  cd ecommercefullstack
+  git pull origin main
 
-            # rebuild and start new containers
-            echo "Building and starting new containers..."
-            sudo docker compose up -d --build
+  # install git if missing
+  if ! command -v git &> /dev/null
+  then
+    echo "Git not found. Installing..."
+    sudo apt-get update -y
+    sudo apt-get install -y git
+  fi
 
-            # show running containers
-            echo "Deployment complete. Running containers:"
-            sudo docker ps
+  # stop old containers if running
+  echo "Stopping old containers..."
+  sudo docker compose down || true
+
+  # rebuild and start new containers
+  echo "Building and starting new containers..."
+  sudo docker compose up -d --build
+
+  # show running containers
+  echo "Deployment complete. Running containers:"
+  sudo docker ps
