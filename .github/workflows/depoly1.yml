@@ -35,16 +35,16 @@ jobs:
           script_stop: true
           script: |
   # go to home
-  cd ~
+   cd ~
 
   # if project folder does not exist, clone it
-  if [ ! -d "ecommercefullstack" ]; then
+   if [ ! -d "ecommercefullstack" ]; then
     echo "Project folder not found. Cloning..."
     git clone https://github.com/<your-username>/<your-repo>.git ecommercefullstack
-  fi
+   fi
 
-  cd ecommercefullstack
-  git pull origin main
+   cd ecommercefullstack
+   git pull origin main
 
   # install git if missing
   if ! command -v git &> /dev/null
