@@ -7,26 +7,11 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy: 
+  deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v3
-
-      - name: List files
-        run: ls -R
-
-      - name: Copy repo to EC2
-        uses: appleboy/scp-action@v0.1.7
-        with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "./*"
-          target: /home/ubuntu/ecommercefullstack
-      
-      - name: Deploy on EC2 with Docker compose
+      - name: Deploy on EC2
         uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
@@ -34,34 +19,38 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           script_stop: true
           script: |
-            # go to home
             cd ~
 
-            # if project folder does not exist, clone it
+            # install git, docker, docker-compose if missing
+            if ! command -v git &> /dev/null; then
+              sudo apt-get update -y
+              sudo apt-get install -y git
+            fi
+
+            if ! command -v docker &> /dev/null; then
+              sudo apt-get install -y docker.io
+              sudo systemctl start docker
+              sudo systemctl enable docker
+            fi
+
+            if ! docker compose version &> /dev/null; then
+              sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+              sudo chmod +x /usr/local/bin/docker-compose
+            fi
+
+            # clone repo if missing
             if [ ! -d "ecommercefullstack" ]; then
-              echo "Project folder not found. Cloning..."
               git clone https://github.com/<your-username>/<your-repo>.git ecommercefullstack
             fi
 
             cd ecommercefullstack
             git pull origin main
 
-            # install git if missing
-            if ! command -v git &> /dev/null
-            then
-              echo "Git not found. Installing..."
-              sudo apt-get update -y
-              sudo apt-get install -y git
-            fi
-
-            # stop old containers if running
-            echo "Stopping old containers..."
+            # stop old containers
             sudo docker compose down || true
 
-            # rebuild and start new containers
-            echo "Building and starting new containers..."
+            # build and start
             sudo docker compose up -d --build
 
-            # show running containers
-            echo "Deployment complete. Running containers:"
+            # check running containers
             sudo docker ps
